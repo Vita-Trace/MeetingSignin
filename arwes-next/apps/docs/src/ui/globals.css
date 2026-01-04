@@ -1,0 +1,31 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+::selection {
+  @apply bg-primary-main-4/[0.25];
+}
+
+a {
+  @apply transition-[outline,color,opacity] ease-out duration-200;
+}
+
+a[href]:focus,
+button:not(:disabled):focus {
+  @apply outline-1 outline-dotted outline-secondary-main-3/50;
+}
+
+.font-header,
+.font-body,
+.font-cta {
+  font-weight: 300;
+}
+
+.font-code {
+  font-weight: 400;
+}
+
+b,
+strong {
+  font-weight: 600;
+}

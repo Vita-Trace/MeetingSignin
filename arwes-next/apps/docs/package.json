@@ -1,0 +1,22 @@
+{
+  "name": "apps-docs",
+  "version": "1.0.0-next.25020502",
+  "private": true,
+  "dependencies": {
+    "@arwes/react": "^1.0.0-next.25020502",
+    "@tailwindcss/typography": "^0.5.14",
+    "autoprefixer": "^10.4.20",
+    "iconoir-react": "^7.8.0",
+    "jotai": "^2.9.2",
+    "next": "^14.2.5",
+    "postcss": "^8.4.41",
+    "prism-react-renderer": "^2.3.1",
+    "react-use": "^17.5.1",
+    "tailwindcss": "^3.4.9"
+  },
+  "scripts": {
+    "dev": "sh ./scripts/setup.sh && next dev -p 9002",
+    "build": "sh ./scripts/setup.sh && next build",
+    "start": "serve ./build -p 9002"
+  }
+}
