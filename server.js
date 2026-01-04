@@ -15,6 +15,7 @@ const server = createServer()
 const wss = new WebSocketServer({ server })
 
 const clients = new Set()
+const checkedInNames = new Set() // 已签到名单
 
 wss.on('connection', (ws) => {
   clients.add(ws)
@@ -24,12 +25,27 @@ wss.on('connection', (ws) => {
     const message = JSON.parse(data.toString())
     console.log('Received:', message)
     
-    // 广播给所有客户端
-    clients.forEach(client => {
-      if (client.readyState === 1) {
-        client.send(JSON.stringify(message))
+    if (message.type === 'checkin') {
+      const name = message.name.trim()
+      
+      // 检查是否已签到
+      if (checkedInNames.has(name)) {
+        // 已签到，只通知发送者
+        ws.send(JSON.stringify({ type: 'checkin_duplicate', name }))
+        console.log('Duplicate checkin rejected:', name)
+        return
       }
-    })
+      
+      // 新签到，记录并广播
+      checkedInNames.add(name)
+      console.log('New checkin:', name, 'Total:', checkedInNames.size)
+      
+      clients.forEach(client => {
+        if (client.readyState === 1) {
+          client.send(JSON.stringify(message))
+        }
+      })
+    }
   })
 
   ws.on('close', () => {
