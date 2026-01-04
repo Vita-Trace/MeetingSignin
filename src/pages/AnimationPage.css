@@ -1,0 +1,382 @@
+.cockpit-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  position: relative;
+  background: #000906;
+}
+
+.cockpit-bg {
+  position: fixed;
+  inset: 0;
+  background: 
+    radial-gradient(ellipse at center, rgba(0, 255, 255, 0.05) 0%, transparent 70%),
+    linear-gradient(rgba(0, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 255, 255, 0.02) 1px, transparent 1px);
+  background-size: 100% 100%, 30px 30px, 30px 30px;
+  pointer-events: none;
+}
+
+/* 登录终端 */
+.login-terminal {
+  width: 100%;
+  max-width: 400px;
+  background: rgba(0, 15, 15, 0.95);
+  border: 1px solid rgba(0, 255, 255, 0.3);
+  box-shadow: 0 0 40px rgba(0, 255, 255, 0.1), inset 0 0 60px rgba(0, 255, 255, 0.03);
+}
+
+.terminal-header {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 12px 15px;
+  border-bottom: 1px solid rgba(0, 255, 255, 0.2);
+  background: rgba(0, 255, 255, 0.05);
+}
+
+.terminal-dots {
+  display: flex;
+  gap: 6px;
+}
+
+.terminal-dots span {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(0, 255, 255, 0.5);
+}
+
+.terminal-dots span:first-child { background: #ff5f56; }
+.terminal-dots span:nth-child(2) { background: #ffbd2e; }
+.terminal-dots span:nth-child(3) { background: #27ca40; }
+
+.terminal-title {
+  font-size: 12px;
+  letter-spacing: 2px;
+  color: rgba(0, 255, 255, 0.7);
+}
+
+.terminal-body {
+  padding: 25px;
+}
+
+.terminal-art {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  color: rgba(0, 255, 255, 0.6);
+  white-space: pre;
+  text-align: center;
+  margin-bottom: 25px;
+  line-height: 1.4;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.input-group label {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: rgba(0, 255, 255, 0.6);
+  margin-bottom: 8px;
+}
+
+.input-wrapper {
+  display: flex;
+  align-items: center;
+  background: rgba(0, 255, 255, 0.05);
+  border: 1px solid rgba(0, 255, 255, 0.3);
+  padding: 0 15px;
+}
+
+.input-wrapper .prompt {
+  color: #0ff;
+  margin-right: 10px;
+}
+
+.input-wrapper input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 15px 0;
+  font-family: 'Orbitron', monospace;
+  font-size: 16px;
+  color: #0ff;
+  letter-spacing: 2px;
+}
+
+.input-wrapper input::placeholder {
+  color: rgba(0, 255, 255, 0.3);
+}
+
+.cursor {
+  width: 10px;
+  height: 20px;
+  background: #0ff;
+  animation: cursorBlink 1s step-end infinite;
+}
+
+@keyframes cursorBlink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+.auth-button {
+  position: relative;
+  padding: 18px 30px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.auth-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 14px;
+  letter-spacing: 3px;
+  color: #0ff;
+}
+
+.btn-icon {
+  font-size: 18px;
+}
+
+.btn-border {
+  position: absolute;
+  inset: 0;
+  border: 2px solid #0ff;
+  clip-path: polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px);
+  transition: all 0.3s;
+}
+
+.auth-button:not(:disabled):hover .btn-border {
+  background: rgba(0, 255, 255, 0.1);
+  box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid transparent;
+  border-top-color: #0ff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.terminal-footer {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 20px;
+  padding-top: 15px;
+  border-top: 1px solid rgba(0, 255, 255, 0.1);
+  font-size: 10px;
+  color: rgba(0, 255, 255, 0.4);
+  letter-spacing: 1px;
+}
+
+/* 成功面板 - 飞船操作界面 */
+.cockpit-panel {
+  width: 100%;
+  max-width: 500px;
+  background: rgba(0, 15, 15, 0.95);
+  border: 1px solid rgba(0, 255, 255, 0.3);
+  box-shadow: 0 0 60px rgba(0, 255, 255, 0.15);
+}
+
+.panel-top {
+  padding: 15px;
+  border-bottom: 1px solid rgba(0, 255, 255, 0.2);
+}
+
+.status-bar {
+  display: flex;
+  justify-content: space-around;
+}
+
+.status-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: rgba(0, 255, 255, 0.3);
+  transition: color 0.5s;
+}
+
+.status-item.active {
+  color: #0f0;
+}
+
+.status-item .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(0, 255, 255, 0.3);
+  transition: background 0.5s;
+}
+
+.status-item.active .dot {
+  background: #0f0;
+  box-shadow: 0 0 10px #0f0;
+}
+
+.welcome-display {
+  padding: 30px;
+}
+
+.hud-frame {
+  position: relative;
+  padding: 30px;
+  border: 1px solid rgba(0, 255, 255, 0.3);
+  margin-bottom: 25px;
+}
+
+.hud-corner {
+  position: absolute;
+  width: 15px;
+  height: 15px;
+  border-color: #0ff;
+  border-style: solid;
+}
+
+.hud-corner.tl { top: -1px; left: -1px; border-width: 2px 0 0 2px; }
+.hud-corner.tr { top: -1px; right: -1px; border-width: 2px 2px 0 0; }
+.hud-corner.bl { bottom: -1px; left: -1px; border-width: 0 0 2px 2px; }
+.hud-corner.br { bottom: -1px; right: -1px; border-width: 0 2px 2px 0; }
+
+.pilot-info {
+  text-align: center;
+}
+
+.pilot-label {
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: rgba(0, 255, 255, 0.6);
+  margin-bottom: 10px;
+}
+
+.pilot-name {
+  font-size: 28px;
+  font-weight: bold;
+  color: #0ff;
+  letter-spacing: 4px;
+  text-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+  margin-bottom: 10px;
+}
+
+.pilot-id {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 12px;
+  color: rgba(0, 255, 255, 0.5);
+}
+
+.boot-sequence {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 12px;
+  line-height: 2;
+}
+
+.boot-line {
+  color: rgba(0, 255, 255, 0.6);
+  min-height: 24px;
+}
+
+.boot-line.success {
+  color: #0f0;
+  font-weight: bold;
+}
+
+.control-panel {
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+  padding: 25px;
+  border-top: 1px solid rgba(0, 255, 255, 0.2);
+}
+
+.gauge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.gauge svg {
+  width: 60px;
+  height: 60px;
+  transform: rotate(-90deg);
+}
+
+.gauge-bg {
+  fill: none;
+  stroke: rgba(0, 255, 255, 0.1);
+  stroke-width: 8;
+}
+
+.gauge-fill {
+  fill: none;
+  stroke: rgba(0, 255, 255, 0.3);
+  stroke-width: 8;
+  stroke-linecap: round;
+  stroke-dasharray: 251;
+  stroke-dashoffset: 251;
+  transition: stroke-dashoffset 0.8s ease-out, stroke 0.3s;
+}
+
+.gauge-fill.full {
+  stroke-dashoffset: 0;
+  stroke: #0ff;
+}
+
+.gauge-label {
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: rgba(0, 255, 255, 0.6);
+}
+
+.bottom-hint {
+  text-align: center;
+  padding: 20px;
+  border-top: 1px solid rgba(0, 255, 255, 0.2);
+}
+
+.bottom-hint .loading {
+  font-size: 12px;
+  letter-spacing: 2px;
+  color: rgba(0, 255, 255, 0.5);
+  animation: pulse 1s ease-in-out infinite;
+}
+
+.bottom-hint .ready {
+  font-size: 14px;
+  letter-spacing: 3px;
+  color: #0f0;
+  text-shadow: 0 0 15px rgba(0, 255, 0, 0.5);
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
