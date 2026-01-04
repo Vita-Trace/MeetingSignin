@@ -18,16 +18,25 @@ function AnimationPage() {
     
     ws.onopen = () => {
       ws.send(JSON.stringify({ type: 'checkin', name: name.trim() }))
-      setConnecting(false)
-      setSubmitted(true)
-      // 启动动画序列
-      let phase = 0
-      const timer = setInterval(() => {
-        phase++
-        setBootPhase(phase)
-        if (phase >= 5) clearInterval(timer)
-      }, 600)
-      ws.close()
+    }
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data)
+      if (data.type === 'checkin' && data.name === name.trim()) {
+        setConnecting(false)
+        setSubmitted(true)
+        let phase = 0
+        const timer = setInterval(() => {
+          phase++
+          setBootPhase(phase)
+          if (phase >= 5) clearInterval(timer)
+        }, 600)
+        ws.close()
+      } else if (data.type === 'checkin_duplicate') {
+        setConnecting(false)
+        alert('您已经签到过了！')
+        ws.close()
+      }
     }
 
     ws.onerror = () => {
