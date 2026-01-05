@@ -1,5 +1,0 @@
-export * from './Icon'
-export * from './IconTailwind'
-export * from './IconReact'
-export * from './IconSolid'
-export * from './IconSvelte'

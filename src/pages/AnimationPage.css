@@ -26,6 +26,8 @@
   background: rgba(0, 15, 15, 0.95);
   border: 1px solid rgba(0, 255, 255, 0.3);
   box-shadow: 0 0 40px rgba(0, 255, 255, 0.1), inset 0 0 60px rgba(0, 255, 255, 0.03);
+  position: relative;
+  overflow: hidden;
 }
 
 .terminal-header {
@@ -196,6 +198,114 @@
   letter-spacing: 1px;
 }
 
+/* 终端提示（替代 alert） */
+.terminal-notice {
+  position: relative;
+  margin-top: 18px;
+  padding: 12px 12px 12px 14px;
+  border: 1px solid rgba(0, 255, 255, 0.18);
+  background: rgba(0, 255, 255, 0.04);
+  overflow: hidden;
+  animation: noticeIn 0.22s ease-out 1;
+}
+
+.terminal-notice::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(90deg, rgba(0, 255, 255, 0.06) 1px, transparent 1px),
+    linear-gradient(rgba(0, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 22px 100%, 100% 22px;
+  opacity: 0.35;
+  animation: noticeGrid 2.8s linear infinite;
+  pointer-events: none;
+}
+
+.terminal-notice.warning {
+  border-color: rgba(255, 200, 0, 0.35);
+  background: rgba(255, 200, 0, 0.06);
+}
+
+.terminal-notice.error {
+  border-color: rgba(255, 45, 85, 0.35);
+  background: rgba(255, 45, 85, 0.06);
+}
+
+.notice-head {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.notice-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(0, 255, 255, 0.9);
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+  animation: noticeBlink 1s step-end infinite;
+}
+
+.terminal-notice.warning .notice-dot {
+  background: rgba(255, 200, 0, 0.95);
+  box-shadow: 0 0 12px rgba(255, 200, 0, 0.45);
+}
+
+.terminal-notice.error .notice-dot {
+  background: rgba(255, 45, 85, 0.95);
+  box-shadow: 0 0 14px rgba(255, 45, 85, 0.45);
+}
+
+.notice-title {
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: rgba(0, 255, 255, 0.85);
+}
+
+.terminal-notice.warning .notice-title {
+  color: rgba(255, 200, 0, 0.9);
+}
+
+.terminal-notice.error .notice-title {
+  color: rgba(255, 45, 85, 0.9);
+}
+
+.notice-body {
+  position: relative;
+  z-index: 1;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  color: rgba(0, 255, 255, 0.65);
+}
+
+.terminal-notice.warning .notice-body {
+  color: rgba(255, 220, 110, 0.85);
+}
+
+.terminal-notice.error .notice-body {
+  color: rgba(255, 160, 180, 0.9);
+}
+
+@keyframes noticeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes noticeGrid {
+  from { background-position: 0 0, 0 0; }
+  to { background-position: 60px 0, 0 60px; }
+}
+
+@keyframes noticeBlink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0.35; }
+}
+
 /* 成功面板 - 飞船操作界面 */
 .cockpit-panel {
   width: 100%;
@@ -203,6 +313,82 @@
   background: rgba(0, 15, 15, 0.95);
   border: 1px solid rgba(0, 255, 255, 0.3);
   box-shadow: 0 0 60px rgba(0, 255, 255, 0.15);
+  position: relative;
+  overflow: hidden;
+}
+
+.cockpit-panel.lockin {
+  box-shadow: 0 0 80px rgba(0, 255, 255, 0.22), 0 0 140px rgba(0, 255, 255, 0.08);
+}
+
+.lockin-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.lockin-overlay.show {
+  animation: lockInFlash 0.65s ease-out 1;
+}
+
+.lockin-content {
+  text-align: center;
+  padding: 18px 22px 16px;
+  border: 1px solid rgba(0, 255, 255, 0.35);
+  background: rgba(0, 15, 15, 0.75);
+  box-shadow: 0 0 50px rgba(0, 255, 255, 0.18);
+  clip-path: polygon(16px 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%, 0 16px);
+}
+
+.lockin-title {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: 6px;
+  color: #0ff;
+  text-shadow: 0 0 22px rgba(0, 255, 255, 0.45);
+}
+
+.lockin-subtitle {
+  margin-top: 10px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 3px;
+  color: rgba(0, 255, 255, 0.7);
+}
+
+.lockin-scan {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.lockin-scan::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 3px;
+  top: -10%;
+  background: linear-gradient(90deg, transparent, rgba(0, 255, 255, 0.6), transparent);
+  filter: blur(0.3px);
+  animation: lockInScan 0.65s ease-out 1;
+}
+
+@keyframes lockInFlash {
+  0% { opacity: 0; transform: scale(0.98); }
+  18% { opacity: 1; transform: scale(1); }
+  70% { opacity: 1; }
+  100% { opacity: 0; transform: scale(1.01); }
+}
+
+@keyframes lockInScan {
+  0% { top: -10%; opacity: 0; }
+  10% { opacity: 1; }
+  100% { top: 110%; opacity: 0; }
 }
 
 .panel-top {

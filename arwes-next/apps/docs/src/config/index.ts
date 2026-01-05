@@ -1,6 +1,0 @@
-export * from './settings'
-export * from './theme'
-export * from './icons'
-export * from './bleeps'
-export * from './animator'
-export * from './atoms'
