@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import './AnimationPage.css'
 
 function AnimationPage() {
@@ -6,15 +6,33 @@ function AnimationPage() {
   const [submitted, setSubmitted] = useState(false)
   const [connecting, setConnecting] = useState(false)
   const [bootPhase, setBootPhase] = useState(0)
+  const [notice, setNotice] = useState(null)
+  const [lockIn, setLockIn] = useState(false)
+  const noticeIdRef = useRef(0)
+
+  const pushNotice = (next) => {
+    setNotice({ ...next, id: noticeIdRef.current++ })
+  }
+
+  useEffect(() => {
+    if (!submitted) return
+    if (bootPhase !== 4) return
+
+    setLockIn(true)
+    const t = setTimeout(() => setLockIn(false), 650)
+    return () => clearTimeout(t)
+  }, [submitted, bootPhase])
 
   const handleSubmit = (e) => {
     e.preventDefault()
     if (!name.trim()) return
 
     setConnecting(true)
+    setNotice(null)
     
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
     const ws = new WebSocket(`${wsProtocol}//${window.location.host}/ws`)
+    let responded = false
     
     ws.onopen = () => {
       ws.send(JSON.stringify({ type: 'checkin', name: name.trim() }))
@@ -23,6 +41,7 @@ function AnimationPage() {
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data)
       if (data.type === 'checkin' && data.name === name.trim()) {
+        responded = true
         setConnecting(false)
         setSubmitted(true)
         let phase = 0
@@ -33,15 +52,34 @@ function AnimationPage() {
         }, 600)
         ws.close()
       } else if (data.type === 'checkin_duplicate') {
+        responded = true
         setConnecting(false)
-        alert('您已经签到过了！')
+        pushNotice({
+          type: 'warning',
+          title: '重复签到',
+          message: '您已签到过了，请勿重复提交。'
+        })
         ws.close()
       }
     }
 
     ws.onerror = () => {
-      alert('连接失败，请重试')
       setConnecting(false)
+      pushNotice({
+        type: 'error',
+        title: '连接失败',
+        message: '网络或服务异常，请稍后重试。'
+      })
+    }
+
+    ws.onclose = () => {
+      if (responded) return
+      setConnecting(false)
+      pushNotice({
+        type: 'error',
+        title: '连接中断',
+        message: '连接已断开，请重新提交。'
+      })
     }
   }
 
@@ -49,7 +87,14 @@ function AnimationPage() {
     return (
       <div className="cockpit-page">
         <div className="cockpit-bg"></div>
-        <div className="cockpit-panel">
+        <div className={`cockpit-panel ${lockIn ? 'lockin' : ''}`}>
+          <div className={`lockin-overlay ${lockIn ? 'show' : ''}`} aria-hidden="true">
+            <div className="lockin-content">
+              <div className="lockin-title">LOCK-IN</div>
+              <div className="lockin-subtitle">ACCESS GRANTED</div>
+            </div>
+            <div className="lockin-scan"></div>
+          </div>
           <div className="panel-top">
             <div className="status-bar">
               <span className={`status-item ${bootPhase >= 1 ? 'active' : ''}`}>
@@ -176,6 +221,16 @@ function AnimationPage() {
               <span className="btn-border"></span>
             </button>
           </form>
+
+          {notice && (
+            <div key={notice.id} className={`terminal-notice ${notice.type}`}>
+              <div className="notice-head">
+                <span className="notice-dot"></span>
+                <span className="notice-title">{notice.title}</span>
+              </div>
+              <div className="notice-body">{notice.message}</div>
+            </div>
+          )}
 
           <div className="terminal-footer">
             <span>SYS.STATUS: ONLINE</span>

@@ -6,10 +6,34 @@
   box-sizing: border-box;
 }
 
+:root {
+  --ui-bg: #000906;
+  --ui-cyan: #00ffff;
+  --ui-cyan-90: rgba(0, 255, 255, 0.9);
+  --ui-cyan-80: rgba(0, 255, 255, 0.8);
+  --ui-cyan-60: rgba(0, 255, 255, 0.6);
+  --ui-cyan-50: rgba(0, 255, 255, 0.5);
+  --ui-cyan-40: rgba(0, 255, 255, 0.4);
+  --ui-cyan-30: rgba(0, 255, 255, 0.3);
+  --ui-cyan-20: rgba(0, 255, 255, 0.2);
+  --ui-cyan-10: rgba(0, 255, 255, 0.1);
+  --ui-cyan-05: rgba(0, 255, 255, 0.05);
+
+  --ui-panel: rgba(0, 20, 20, 0.6);
+  --ui-panel-strong: rgba(0, 20, 20, 0.8);
+  --ui-stroke: var(--ui-cyan-30);
+  --ui-glow: rgba(0, 255, 255, 0.35);
+
+  --ui-success: #00ff66;
+  --ui-success-glow: rgba(0, 255, 102, 0.35);
+  --ui-danger: #ff2d55;
+  --ui-danger-glow: rgba(255, 45, 85, 0.35);
+}
+
 body {
   font-family: 'Orbitron', 'Share Tech Mono', monospace;
-  background: #000906;
-  color: #0ff;
+  background: var(--ui-bg);
+  color: var(--ui-cyan);
   min-height: 100vh;
   overflow: hidden;
 }
@@ -23,10 +47,10 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(0, 255, 255, 0.1);
+  background: var(--ui-cyan-10);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(0, 255, 255, 0.4);
+  background: var(--ui-cyan-40);
   border-radius: 3px;
 }
