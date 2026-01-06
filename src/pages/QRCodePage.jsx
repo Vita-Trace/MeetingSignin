@@ -5,6 +5,12 @@ import { Animated } from '@arwes/react-animated'
 import './QRCodePage.css'
 
 function QRCodePage() {
+  const BG_VOLUME = 1
+  const BG_DUCK_VOLUME = 0.5
+  const DOOR_VOLUME = 0.9
+  const ACCESS_VOLUME = 1
+  const POWER_VOLUME = 0.9
+
   const [url, setUrl] = useState('')
   const [names, setNames] = useState([])
   const [checkinList, setCheckinList] = useState([])
@@ -30,6 +36,15 @@ function QRCodePage() {
   const checkinTimesRef = useRef([])
   const TOAST_DISPLAY_MS = 2000
   const TOAST_EXIT_MS = 600
+  const bgAudioRef = useRef(null)
+  const doorAudioRef = useRef(null)
+  const accessAudioRef = useRef(null)
+  const powerAudioRef = useRef(null)
+  const doorEndedRef = useRef(true)
+  const accessEndedRef = useRef(true)
+  const successRef = useRef(false)
+  const powerPlayedRef = useRef(false)
+  const bgNeedsGestureRef = useRef(false)
 
   if (!telemetryLinesRef.current) {
     const toHex = (num, len) => num.toString(16).toUpperCase().padStart(len, '0')
@@ -56,9 +71,139 @@ function QRCodePage() {
     setPeakPerMin(prev => Math.max(prev, nextPerMin))
   }, [])
 
+  const maybePlayPower = useCallback(() => {
+    if (!successRef.current) return
+    if (!doorEndedRef.current || !accessEndedRef.current) return
+    if (powerPlayedRef.current) return
+
+    const power = powerAudioRef.current
+    if (!power) return
+    powerPlayedRef.current = true
+    power.currentTime = 0
+    power.play().catch(() => {})
+  }, [])
+
+  const restoreBackground = useCallback(() => {
+    const bg = bgAudioRef.current
+    if (!bg) return
+    bg.volume = BG_VOLUME
+  }, [BG_VOLUME])
+
+  const startBackgroundIfNeeded = useCallback(() => {
+    const bg = bgAudioRef.current
+    if (!bg) return
+    bg.volume = BG_VOLUME
+    if (!bg.paused) return
+    const playPromise = bg.play()
+    if (playPromise && typeof playPromise.catch === 'function') {
+      playPromise.catch(() => {
+        bgNeedsGestureRef.current = true
+      })
+    }
+  }, [BG_VOLUME])
+
+  const startDoorSequence = useCallback(() => {
+    successRef.current = false
+    powerPlayedRef.current = false
+    doorEndedRef.current = false
+    accessEndedRef.current = true
+    startBackgroundIfNeeded()
+
+    const door = doorAudioRef.current
+    if (!door) return
+    door.currentTime = 0
+    door.play().catch(() => {})
+  }, [startBackgroundIfNeeded])
+
+  const playAccessGranted = useCallback(() => {
+    successRef.current = true
+    accessEndedRef.current = false
+
+    const bg = bgAudioRef.current
+    if (bg) {
+      bg.volume = BG_DUCK_VOLUME
+    }
+
+    const access = accessAudioRef.current
+    if (!access) {
+      accessEndedRef.current = true
+      restoreBackground()
+      maybePlayPower()
+      return
+    }
+
+    access.currentTime = 0
+    const playPromise = access.play()
+    if (playPromise && typeof playPromise.catch === 'function') {
+      playPromise.catch(() => {
+        accessEndedRef.current = true
+        restoreBackground()
+        maybePlayPower()
+      })
+    }
+  }, [BG_DUCK_VOLUME, maybePlayPower, restoreBackground])
+
   useEffect(() => {
     toastsRef.current = toasts
   }, [toasts])
+
+  useEffect(() => {
+    const bg = new Audio('/sci-fi-soundscape-drone.mp3')
+    bg.loop = true
+    bg.volume = BG_VOLUME
+    bgAudioRef.current = bg
+
+    const door = new Audio('/open_door_close_door.m4a')
+    door.volume = DOOR_VOLUME
+    doorAudioRef.current = door
+
+    const access = new Audio('/access-granted-female-soft-voice.wav')
+    access.volume = ACCESS_VOLUME
+    accessAudioRef.current = access
+
+    const power = new Audio('/power-up1.wav')
+    power.volume = POWER_VOLUME
+    powerAudioRef.current = power
+
+    const handleDoorEnded = () => {
+      doorEndedRef.current = true
+      maybePlayPower()
+    }
+
+    const handleAccessEnded = () => {
+      accessEndedRef.current = true
+      restoreBackground()
+      maybePlayPower()
+    }
+
+    door.addEventListener('ended', handleDoorEnded)
+    access.addEventListener('ended', handleAccessEnded)
+    access.addEventListener('error', handleAccessEnded)
+
+    startBackgroundIfNeeded()
+
+    const handleUserGesture = () => {
+      if (!bgNeedsGestureRef.current) return
+      bgNeedsGestureRef.current = false
+      startBackgroundIfNeeded()
+    }
+
+    window.addEventListener('pointerdown', handleUserGesture)
+    window.addEventListener('keydown', handleUserGesture)
+
+    return () => {
+      door.removeEventListener('ended', handleDoorEnded)
+      access.removeEventListener('ended', handleAccessEnded)
+      access.removeEventListener('error', handleAccessEnded)
+      window.removeEventListener('pointerdown', handleUserGesture)
+      window.removeEventListener('keydown', handleUserGesture)
+      ;[bg, door, access, power].forEach((audio) => {
+        if (!audio) return
+        audio.pause()
+        audio.currentTime = 0
+      })
+    }
+  }, [ACCESS_VOLUME, BG_VOLUME, DOOR_VOLUME, POWER_VOLUME, maybePlayPower, restoreBackground, startBackgroundIfNeeded])
 
   useEffect(() => {
     const updateBounds = () => {
@@ -86,22 +231,45 @@ function QRCodePage() {
     const rect = centerBoundsRef.current
     const leftRect = leftBoundsRef.current
     const rightRect = rightBoundsRef.current
-    const toastWidth = Math.min(560, width - 60)
-    const toastHeight = 180
     const margin = 20
+    const toastHeight = 180
+    const clamp = (value, min, max) => Math.min(max, Math.max(min, value))
 
     if (!width || !height || !rect || !leftRect || !rightRect) {
-      return { x: 40 + Math.random() * 200, y: 60 + Math.random() * 120 }
+      const fallbackWidth = Math.max(200, Math.min(560, width - margin * 2))
+      const x = clamp(margin, margin, width - fallbackWidth - margin)
+      const y = clamp(height * 0.2, margin, height - toastHeight - margin)
+      return { x, y, width: fallbackWidth }
     }
 
-    const columnLeft = Math.min(width - margin, leftRect.right + margin)
-    const columnRight = Math.max(margin, rightRect.left - margin)
-    const columnWidth = columnRight - columnLeft
+    const columnLeft = leftRect.right + margin
+    const columnRight = rightRect.left - margin
+    const columnWidth = Math.max(0, columnRight - columnLeft)
+    const leftWidth = Math.max(0, rect.left - margin - columnLeft)
+    const rightStart = rect.right + margin
+    const rightWidth = Math.max(0, columnRight - margin - rect.right)
 
-    if (columnWidth < toastWidth * 0.8) {
-      return { x: columnLeft, y: Math.max(margin, rect.top - toastHeight - margin) }
+    const sideColumns = []
+    if (leftWidth > 0) sideColumns.push({ x: columnLeft, width: leftWidth })
+    if (rightWidth > 0) sideColumns.push({ x: rightStart, width: rightWidth })
+
+    if (sideColumns.length) {
+      const column = sideColumns[Math.floor(Math.random() * sideColumns.length)]
+      const toastWidth = Math.min(560, width - margin * 2, column.width)
+      const maxX = column.x + Math.max(0, column.width - toastWidth)
+      const x = column.x + Math.random() * Math.max(0, column.width - toastWidth)
+      const minY = margin
+      const maxY = Math.max(minY, height - toastHeight - margin)
+      const y = minY + Math.random() * Math.max(0, maxY - minY)
+
+      return {
+        x: clamp(x, margin, width - toastWidth - margin),
+        y: clamp(y, margin, height - toastHeight - margin),
+        width: toastWidth
+      }
     }
 
+    const toastWidth = Math.min(560, width - margin * 2, columnWidth)
     const safeAreas = [
       {
         x: columnLeft,
@@ -126,12 +294,16 @@ function QRCodePage() {
           h: Math.max(120, rect.top - margin)
         }
 
-    const maxX = Math.max(target.x, target.x + target.w - toastWidth)
-    const maxY = Math.max(target.y, target.y + target.h - toastHeight)
+    const maxX = target.x + Math.max(0, target.w - toastWidth)
+    const maxY = target.y + Math.max(0, target.h - toastHeight)
     const x = target.x + Math.random() * Math.max(0, maxX - target.x)
     const y = target.y + Math.random() * Math.max(0, maxY - target.y)
 
-    return { x, y }
+    return {
+      x: clamp(x, margin, width - toastWidth - margin),
+      y: clamp(y, margin, height - toastHeight - margin),
+      width: toastWidth
+    }
   }, [])
 
   const scheduleToastRemoval = useCallback((toastId) => {
@@ -187,6 +359,7 @@ function QRCodePage() {
       time,
       x: position.x,
       y: position.y,
+      width: position.width,
       dismissed: false
     }
     setToasts(prev => [...prev, toast])
@@ -212,6 +385,8 @@ function QRCodePage() {
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data)
       if (data.type === 'checkin') {
+        startDoorSequence()
+        playAccessGranted()
         addMeteor(data.name)
       }
     }
@@ -225,7 +400,7 @@ function QRCodePage() {
       setWsStatus('offline')
       ws.close()
     }
-  }, [addMeteor])
+  }, [addMeteor, playAccessGranted, startDoorSequence])
 
   useEffect(() => {
     const host = window.location.origin
@@ -287,7 +462,7 @@ function QRCodePage() {
             className="checkin-toast"
             animated="fade"
             hideOnExited={false}
-            style={{ top: toast.y, left: toast.x }}
+            style={{ top: toast.y, left: toast.x, width: toast.width }}
           >
             <div className="toast-frame">
               <div className="toast-corner tl"></div>
