@@ -5,8 +5,8 @@ export default defineConfig({
   plugins: [react()],
   server: {
     host: true,
-    port: 5173,
-    allowedHosts: ['bq75687485.imdo.co'],
+    port: 5179,
+    allowedHosts: true,
     proxy: {
       '/ws': {
         target: 'ws://localhost:3001',
