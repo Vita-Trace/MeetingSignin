@@ -154,7 +154,6 @@
   top: 16%;
   left: 50%;
   width: min(560px, calc(100vw - 60px));
-  transform: translate(-50%, -50%);
   z-index: 120;
   pointer-events: none;
 }
