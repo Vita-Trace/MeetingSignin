@@ -16,17 +16,40 @@ const wss = new WebSocketServer({ server })
 
 const clients = new Set()
 const checkedInNames = new Set() // 已签到名单
+const checkinLog = [] // { name, time, blessing, timestamp }
+
+const safeSend = (ws, payload) => {
+  if (ws.readyState !== 1) return false
+  try {
+    ws.send(payload)
+    return true
+  } catch (err) {
+    console.warn('Send failed:', err.message)
+    return false
+  }
+}
 
 wss.on('connection', (ws) => {
   clients.add(ws)
   console.log('Client connected, total:', clients.size)
+  safeSend(ws, JSON.stringify({ type: 'checkin_snapshot', items: checkinLog }))
+
+  ws.on('error', (err) => {
+    console.warn('Client socket error:', err.message)
+    clients.delete(ws)
+  })
 
   ws.on('message', (data) => {
     const message = JSON.parse(data.toString())
     console.log('Received:', message)
     
     if (message.type === 'checkin') {
-      const name = message.name.trim()
+      const name = typeof message.name === 'string' ? message.name.trim() : ''
+      if (!name) {
+        ws.send(JSON.stringify({ type: 'checkin_error', message: 'Invalid name.' }))
+        return
+      }
+      const blessing = typeof message.blessing === 'string' ? message.blessing.trim() : ''
       
       // 检查是否已签到
       if (checkedInNames.has(name)) {
@@ -39,11 +62,14 @@ wss.on('connection', (ws) => {
       // 新签到，记录并广播
       checkedInNames.add(name)
       console.log('New checkin:', name, 'Total:', checkedInNames.size)
+      const timestamp = Date.now()
+      const time = new Date(timestamp).toLocaleTimeString()
+      const payload = { type: 'checkin', name, time, blessing, timestamp }
+      checkinLog.unshift({ name, time, blessing, timestamp })
       
       clients.forEach(client => {
-        if (client.readyState === 1) {
-          client.send(JSON.stringify(message))
-        }
+        const ok = safeSend(client, JSON.stringify(payload))
+        if (!ok) clients.delete(client)
       })
     }
   })
