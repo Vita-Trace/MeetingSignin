@@ -2,7 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import './AnimationPage.css'
 
 function AnimationPage() {
+  const DEFAULT_BLESSING = '工作顺利，万事如意'
   const [name, setName] = useState('')
+  const [blessing, setBlessing] = useState('')
   const [submitted, setSubmitted] = useState(false)
   const [connecting, setConnecting] = useState(false)
   const [bootPhase, setBootPhase] = useState(0)
@@ -25,7 +27,9 @@ function AnimationPage() {
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    if (!name.trim()) return
+    const trimmedName = name.trim()
+    if (!trimmedName) return
+    const blessingText = blessing.trim() || DEFAULT_BLESSING
 
     setConnecting(true)
     setNotice(null)
@@ -35,12 +39,12 @@ function AnimationPage() {
     let responded = false
     
     ws.onopen = () => {
-      ws.send(JSON.stringify({ type: 'checkin', name: name.trim() }))
+      ws.send(JSON.stringify({ type: 'checkin', name: trimmedName, blessing: blessingText }))
     }
 
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data)
-      if (data.type === 'checkin' && data.name === name.trim()) {
+      if (data.type === 'checkin' && data.name === trimmedName) {
         responded = true
         setConnecting(false)
         setSubmitted(true)
@@ -58,6 +62,15 @@ function AnimationPage() {
           type: 'warning',
           title: '重复签到',
           message: '您已签到过了，请勿重复提交。'
+        })
+        ws.close()
+      } else if (data.type === 'checkin_error') {
+        responded = true
+        setConnecting(false)
+        pushNotice({
+          type: 'error',
+          title: '提交失败',
+          message: data.message || '提交信息异常，请重新输入。'
         })
         ws.close()
       }
@@ -201,6 +214,19 @@ function AnimationPage() {
                   autoComplete="off"
                 />
                 <span className="cursor"></span>
+              </div>
+            </div>
+            <div className="input-group">
+              <label>BLESSING MESSAGE (OPTIONAL):</label>
+              <div className="input-wrapper">
+                <span className="prompt">&gt;</span>
+                <input
+                  type="text"
+                  value={blessing}
+                  onChange={(e) => setBlessing(e.target.value)}
+                  placeholder={DEFAULT_BLESSING}
+                  autoComplete="off"
+                />
               </div>
             </div>
             

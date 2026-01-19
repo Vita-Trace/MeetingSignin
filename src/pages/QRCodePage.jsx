@@ -1,10 +1,12 @@
 import { QRCodeSVG } from 'qrcode.react'
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { Animator } from '@arwes/react-animator'
 import { Animated } from '@arwes/react-animated'
+import nameListRaw from '../assets/name.txt?raw'
 import './QRCodePage.css'
 
 function QRCodePage() {
+  const DEFAULT_BLESSING = '工作顺利，万事如意'
   const BG_VOLUME = 1
   const BG_DUCK_VOLUME = 0.5
   const DOOR_VOLUME = 0.9
@@ -15,6 +17,9 @@ function QRCodePage() {
   const [names, setNames] = useState([])
   const [checkinList, setCheckinList] = useState([])
   const [toasts, setToasts] = useState([])
+  const [barrages, setBarrages] = useState([])
+  const [manifestPerPage, setManifestPerPage] = useState(0)
+  const [manifestPage, setManifestPage] = useState(0)
   const [wsStatus, setWsStatus] = useState('connecting') // connecting | online | offline
   const [perMin, setPerMin] = useState(0)
   const [peakPerMin, setPeakPerMin] = useState(0)
@@ -27,6 +32,10 @@ function QRCodePage() {
   const toastsRef = useRef([])
   const centerContentRef = useRef(null)
   const centerBoundsRef = useRef(null)
+  const qrFrameRef = useRef(null)
+  const qrBoundsRef = useRef(null)
+  const manifestGridRef = useRef(null)
+  const manifestItemRef = useRef(null)
   const leftPanelRef = useRef(null)
   const rightPanelRef = useRef(null)
   const leftBoundsRef = useRef(null)
@@ -34,6 +43,8 @@ function QRCodePage() {
   const viewportRef = useRef({ width: 0, height: 0 })
   const telemetryLinesRef = useRef(null)
   const checkinTimesRef = useRef([])
+  const barrageIdRef = useRef(0)
+  const barrageLaneIndexRef = useRef(0)
   const TOAST_DISPLAY_MS = 2000
   const TOAST_EXIT_MS = 600
   const bgAudioRef = useRef(null)
@@ -45,6 +56,103 @@ function QRCodePage() {
   const successRef = useRef(false)
   const powerPlayedRef = useRef(false)
   const bgNeedsGestureRef = useRef(false)
+
+  const crewNames = useMemo(() => {
+    return nameListRaw
+      .split(/\r?\n/)
+      .map(name => name.trim())
+      .filter(Boolean)
+  }, [nameListRaw])
+
+  const checkedNames = useMemo(() => {
+    return new Set(checkinList.map(item => item.name))
+  }, [checkinList])
+
+  const checkedCrewCount = useMemo(() => {
+    return crewNames.reduce((count, name) => (checkedNames.has(name) ? count + 1 : count), 0)
+  }, [crewNames, checkedNames])
+
+  const missingNames = useMemo(() => {
+    return crewNames.filter(name => !checkedNames.has(name))
+  }, [crewNames, checkedNames])
+
+  const manifestPageCount = useMemo(() => {
+    if (!crewNames.length) return 1
+    if (!manifestPerPage) return 1
+    return Math.max(1, Math.ceil(crewNames.length / manifestPerPage))
+  }, [crewNames.length, manifestPerPage])
+
+  const manifestStartIndex = useMemo(() => {
+    if (!manifestPerPage) return 0
+    return manifestPage * manifestPerPage
+  }, [manifestPage, manifestPerPage])
+
+  const visibleCrewNames = useMemo(() => {
+    if (!crewNames.length) return []
+    if (!manifestPerPage) return crewNames
+    return crewNames.slice(manifestStartIndex, manifestStartIndex + manifestPerPage)
+  }, [crewNames, manifestPerPage, manifestStartIndex])
+
+  const handleExportMissing = useCallback(() => {
+    if (!missingNames.length) return
+    const payload = missingNames.join('\n')
+    const blob = new Blob([payload], { type: 'text/plain;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = 'crew-missing.txt'
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
+  }, [missingNames])
+
+  const getBarrageTop = useCallback(() => {
+    const { height } = viewportRef.current
+    const rect = qrBoundsRef.current || centerBoundsRef.current
+    const margin = 18
+    const laneHeight = 22
+
+    if (!height) return margin
+
+    const lanes = []
+    const pushLanes = (start, end) => {
+      const safeStart = Math.max(margin, start)
+      const safeEnd = Math.min(height - margin, end)
+      if (safeEnd - safeStart < laneHeight) return
+      for (let y = safeStart; y <= safeEnd - laneHeight; y += laneHeight) {
+        lanes.push(y)
+      }
+    }
+
+    if (rect) {
+      pushLanes(margin, rect.top - margin)
+      pushLanes(rect.bottom + margin, height - margin)
+    } else {
+      pushLanes(margin, height - margin)
+    }
+
+    if (!lanes.length) {
+      if (!rect) return margin
+      const topSpace = rect.top - margin
+      const bottomSpace = height - rect.bottom - margin
+      const fallbackTop = topSpace >= bottomSpace
+        ? Math.max(margin, rect.top - laneHeight - margin)
+        : Math.min(height - margin - laneHeight, rect.bottom + margin)
+      return Math.max(margin, fallbackTop)
+    }
+
+    const index = barrageLaneIndexRef.current++ % lanes.length
+    return lanes[index] + Math.random() * 6
+  }, [])
+
+  const addBarrage = useCallback((text) => {
+    const id = barrageIdRef.current++
+    const duration = 16 + Math.random() * 10
+    const delay = -(Math.random() * duration)
+    const top = getBarrageTop()
+    setBarrages(prev => [...prev, { id, text, top, duration, delay }])
+  }, [getBarrageTop])
 
   if (!telemetryLinesRef.current) {
     const toHex = (num, len) => num.toString(16).toUpperCase().padStart(len, '0')
@@ -214,6 +322,9 @@ function QRCodePage() {
       if (centerContentRef.current) {
         centerBoundsRef.current = centerContentRef.current.getBoundingClientRect()
       }
+      if (qrFrameRef.current) {
+        qrBoundsRef.current = qrFrameRef.current.getBoundingClientRect()
+      }
       if (leftPanelRef.current) {
         leftBoundsRef.current = leftPanelRef.current.getBoundingClientRect()
       }
@@ -225,6 +336,51 @@ function QRCodePage() {
     window.addEventListener('resize', updateBounds)
     return () => window.removeEventListener('resize', updateBounds)
   }, [])
+
+  useEffect(() => {
+    const container = manifestGridRef.current
+    if (!container) return
+
+    const updatePerPage = () => {
+      const item = manifestItemRef.current
+      if (!item) return
+      const style = window.getComputedStyle(container)
+      const rowGap = parseFloat(style.rowGap || style.gap || '0') || 0
+      const paddingTop = parseFloat(style.paddingTop || '0') || 0
+      const paddingBottom = parseFloat(style.paddingBottom || '0') || 0
+      const columns = style.gridTemplateColumns.split(' ').filter(Boolean).length || 1
+      const itemHeight = item.getBoundingClientRect().height
+      if (!itemHeight) return
+      const rowHeight = itemHeight + rowGap
+      const availableHeight = Math.max(0, container.clientHeight - paddingTop - paddingBottom)
+      const rows = Math.max(1, Math.floor(availableHeight / rowHeight))
+      setManifestPerPage(rows * columns)
+    }
+
+    updatePerPage()
+    const observer = new ResizeObserver(updatePerPage)
+    observer.observe(container)
+    if (manifestItemRef.current) observer.observe(manifestItemRef.current)
+    window.addEventListener('resize', updatePerPage)
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('resize', updatePerPage)
+    }
+  }, [crewNames.length, manifestPage])
+
+  useEffect(() => {
+    if (manifestPage >= manifestPageCount) {
+      setManifestPage(0)
+    }
+  }, [manifestPage, manifestPageCount])
+
+  useEffect(() => {
+    if (manifestPageCount <= 1) return
+    const timer = setInterval(() => {
+      setManifestPage(prev => (prev + 1) % manifestPageCount)
+    }, 3000)
+    return () => clearInterval(timer)
+  }, [manifestPageCount])
 
   const getToastPosition = useCallback(() => {
     const { width, height } = viewportRef.current
@@ -330,9 +486,9 @@ function QRCodePage() {
     toastTimersRef.current.set(toastId, timer)
   }, [dismissToast, TOAST_DISPLAY_MS])
 
-  const addMeteor = useCallback((name) => {
+  const addMeteor = useCallback((name, timeOverride) => {
     const id = idCounter.current++
-    const time = new Date().toLocaleTimeString()
+    const time = timeOverride || new Date().toLocaleTimeString()
     const meteor = {
       id,
       name,
@@ -342,7 +498,7 @@ function QRCodePage() {
     }
     
     setNames(prev => [...prev, meteor])
-    setCheckinList(prev => [{ name, time }, ...prev].slice(0, 50))
+    setCheckinList(prev => [{ name, time }, ...prev])
 
     checkinTimesRef.current.push(Date.now())
     refreshRates()
@@ -384,10 +540,28 @@ function QRCodePage() {
 
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data)
+      if (data.type === 'checkin_snapshot' && Array.isArray(data.items)) {
+        const hydrated = data.items
+          .map(item => {
+            const name = typeof item.name === 'string' ? item.name.trim() : ''
+            if (!name) return null
+            const time = item.time
+              || (item.timestamp ? new Date(item.timestamp).toLocaleTimeString() : '')
+            return { name, time }
+          })
+          .filter(Boolean)
+        setCheckinList(hydrated)
+        checkinTimesRef.current = data.items
+          .map(item => (typeof item.timestamp === 'number' ? item.timestamp : null))
+          .filter(Boolean)
+        return
+      }
       if (data.type === 'checkin') {
         startDoorSequence()
         playAccessGranted()
-        addMeteor(data.name)
+        addMeteor(data.name, data.time)
+        const blessingText = (data.blessing || '').trim() || DEFAULT_BLESSING
+        addBarrage(`${data.name}：${blessingText}`)
       }
     }
 
@@ -400,7 +574,7 @@ function QRCodePage() {
       setWsStatus('offline')
       ws.close()
     }
-  }, [addMeteor, playAccessGranted, startDoorSequence])
+  }, [addBarrage, addMeteor, playAccessGranted, startDoorSequence])
 
   useEffect(() => {
     const host = window.location.origin
@@ -501,26 +675,66 @@ function QRCodePage() {
         ))}
       </div>
 
+      {/* Blessing barrage */}
+      <div className="barrage-layer" aria-hidden="true">
+        {barrages.map(item => (
+          <div
+            key={item.id}
+            className="barrage-item"
+            style={{
+              top: `${item.top}px`,
+              animationDuration: `${item.duration}s`,
+              animationDelay: `${item.delay}s`
+            }}
+          >
+            <span className="barrage-text">{item.text}</span>
+          </div>
+        ))}
+      </div>
+
       {/* 左侧签到名单 */}
       <div className="left-panel" ref={leftPanelRef}>
         <div className="panel-frame">
           <div className="panel-header">
             <span className="blink">●</span> CREW MANIFEST
           </div>
-          <div className="panel-content">
-            {checkinList.length === 0 ? (
-              <div className="empty-list">等待船员登记...</div>
+          <div className="panel-content manifest-grid" ref={manifestGridRef}>
+            {crewNames.length === 0 ? (
+              <div className="empty-list">未加载乘员清单...</div>
             ) : (
-              checkinList.map((item, i) => (
-                <div key={i} className="crew-item" style={{animationDelay: `${i * 0.05}s`}}>
-                  <span className="crew-name">{item.name}</span>
-                  <span className="crew-time">{item.time}</span>
-                </div>
-              ))
+              visibleCrewNames.map((name, i) => {
+                const isChecked = checkedNames.has(name)
+                return (
+                  <div
+                    key={`${name}-${manifestStartIndex + i}`}
+                    className={`crew-item manifest-item ${isChecked ? 'checked' : 'pending'}`}
+                    ref={i === 0 ? manifestItemRef : null}
+                  >
+                    <span className="crew-name">{name}</span>
+                    <span className="crew-status">{isChecked ? 'IN' : 'WAIT'}</span>
+                  </div>
+                )
+              })
             )}
           </div>
           <div className="panel-footer">
-            TOTAL: {checkinList.length} CREW MEMBERS
+            <div className="panel-summary">
+              <span>TOTAL: {crewNames.length}</span>
+              <span>CHECKED: {checkedCrewCount}</span>
+              <span>MISSING: {missingNames.length}</span>
+            </div>
+            <div className="panel-page">
+              PAGE {crewNames.length ? manifestPage + 1 : 1} / {manifestPageCount}
+            </div>
+            <button
+              type="button"
+              className="manifest-button"
+              onClick={handleExportMissing}
+              disabled={!missingNames.length}
+            >
+              <span className="manifest-button-text">EXPORT MISSING</span>
+              <span className="manifest-button-border"></span>
+            </button>
           </div>
         </div>
       </div>
@@ -548,7 +762,7 @@ function QRCodePage() {
               <div className="hud-ring ring-three"></div>
               <div className="shield-pulse"></div>
               <div className="door-seam"></div>
-              <div className="qr-frame">
+              <div className="qr-frame" ref={qrFrameRef}>
                 <div className="corner tl"></div>
                 <div className="corner tr"></div>
                 <div className="corner bl"></div>
